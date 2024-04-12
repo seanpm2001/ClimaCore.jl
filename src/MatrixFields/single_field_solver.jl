@@ -12,12 +12,12 @@ x_eltype(A::UniformScaling, b) = x_eltype(eltype(A), eltype(b))
 x_eltype(A::ColumnwiseBandMatrixField, b) =
     x_eltype(eltype(eltype(A)), eltype(b))
 x_eltype(::Type{T_A}, ::Type{T_b}) where {T_A, T_b} =
-    rmul_return_type(inv_return_type(T_A), T_b)
+    rmul_with_projection_return_type(inv_return_type(T_A), T_b)
 
 unit_eltype(A::UniformScaling) = unit_eltype(eltype(A))
 unit_eltype(A::ColumnwiseBandMatrixField) = unit_eltype(eltype(eltype(A)))
 unit_eltype(::Type{T_A}) where {T_A} =
-    rmul_return_type(inv_return_type(T_A), T_A)
+    rmul_with_projection_return_type(inv_return_type(T_A), T_A)
 
 ################################################################################
 

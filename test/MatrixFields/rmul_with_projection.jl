@@ -1,12 +1,13 @@
 using StaticArrays: @SMatrix
 
-import ClimaCore.MatrixFields: rmul_with_projection, rmul_return_type
+import ClimaCore.MatrixFields:
+    rmul_with_projection, rmul_with_projection_return_type
 
 include("matrix_field_test_utils.jl")
 
 function test_rmul_with_projection(x::X, y::Y, lg, expected_result) where {X, Y}
     result = rmul_with_projection(x, y, lg)
-    result_type = rmul_return_type(X, Y)
+    result_type = rmul_with_projection_return_type(X, Y)
 
     # Compute the maximum error as an integer multiple of machine epsilon.
     FT = Geometry.undertype(typeof(lg))
@@ -23,8 +24,8 @@ function test_rmul_with_projection(x::X, y::Y, lg, expected_result) where {X, Y}
     @test_opt rmul_with_projection(x, y, lg)               # type instabilities
 
     @test result_type == typeof(result)                    # correctness
-    @test (@allocated rmul_return_type(X, Y)) == 0         # allocations
-    @test_opt rmul_return_type(X, Y)                       # type instabilities
+    @test (@allocated rmul_with_projection_return_type(X, Y)) == 0         # allocations
+    @test_opt rmul_with_projection_return_type(X, Y)                       # type instabilities
 end
 
 @testset "rmul_with_projection Unit Tests" begin

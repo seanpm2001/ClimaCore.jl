@@ -49,7 +49,7 @@ axis2(::Type{<:Geometry.AdjointAxis2Tensor{<:Any, <:Tuple{A, Any}}}) where {A} =
     A
 
 """
-    mul_return_type(X, Y)
+    mul_with_projection_return_type(X, Y)
 
 Computes the return type of `mul_with_projection(x, y, lg)`, where `x isa X`
 and `y isa Y`. This can also be used to obtain the return type of `x * y`,
@@ -58,7 +58,7 @@ although `x * y` will throw an error when projection is necessary.
 Note that this is equivalent to calling the internal function `_return_type`:
 `Base._return_type(mul_with_projection, Tuple{X, Y, LG})`, where `lg isa LG`.
 """
-mul_return_type(::Type{X}, ::Type{Y}) where {X, Y} = error(
+mul_with_projection_return_type(::Type{X}, ::Type{Y}) where {X, Y} = error(
     "Unable to infer return type: Multiplying an object of type $X with an \
      object of type $Y will result in a method error",
 )
@@ -66,36 +66,39 @@ mul_return_type(::Type{X}, ::Type{Y}) where {X, Y} = error(
 # methods below should be updated.
 
 # Methods from Base:
-mul_return_type(::Type{X}, ::Type{Y}) where {X <: Number, Y <: Number} =
-    promote_type(X, Y)
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
-) where {X <: AdjointAbsVec, Y <: AbstractMatrix} =
-    adjoint_type(mul_return_type(adjoint_type(Y), adjoint_type(X)))
+) where {X <: Number, Y <: Number} = promote_type(X, Y)
+mul_with_projection_return_type(
+    ::Type{X},
+    ::Type{Y},
+) where {X <: AdjointAbsVec, Y <: AbstractMatrix} = adjoint_type(
+    mul_with_projection_return_type(adjoint_type(Y), adjoint_type(X)),
+)
 
 # Methods from ClimaCore: 
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {T, N, A, X <: Number, Y <: Geometry.AxisTensor{T, N, A}} =
     axis_tensor_type(promote_type(X, T), A)
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {T, N, A, X <: Geometry.AxisTensor{T, N, A}, Y <: Number} =
     axis_tensor_type(promote_type(T, Y), A)
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {T, N, A, X <: Number, Y <: Geometry.AdjointAxisTensor{T, N, A}} =
     adjoint_type(axis_tensor_type(promote_type(X, T), A))
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {T, N, A, X <: Geometry.AdjointAxisTensor{T, N, A}, Y <: Number} =
     adjoint_type(axis_tensor_type(promote_type(T, Y), A))
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {
@@ -104,7 +107,7 @@ mul_return_type(
     X <: Geometry.AdjointAxisVector{T1},
     Y <: Geometry.AxisVector{T2},
 } = promote_type(T1, T2) # This comes from the definition of dot.
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {
@@ -115,7 +118,7 @@ mul_return_type(
     X <: Geometry.AxisVector{T1, A1},
     Y <: Geometry.AdjointAxisVector{T2, A2},
 } = axis_tensor_type(promote_type(T1, T2), Tuple{A1, A2})
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {
@@ -124,7 +127,7 @@ mul_return_type(
     X <: Geometry.Axis2TensorOrAdj{T1},
     Y <: Geometry.AxisVector{T2},
 } = axis_tensor_type(promote_type(T1, T2), Tuple{axis1(X)})
-mul_return_type(
+mul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
 ) where {
@@ -135,7 +138,7 @@ mul_return_type(
 } = axis_tensor_type(promote_type(T1, T2), Tuple{axis1(X), axis2(Y)})
 
 """
-    rmul_return_type(X, Y)
+    rmul_with_projection_return_type(X, Y)
 
 Computes the return type of `rmul_with_projection(x, y, lg)`, where `x isa X`
 and `y isa Y`. This can also be used to obtain the return type of `rmul(x, y)`,
@@ -144,13 +147,20 @@ although `rmul(x, y)` will throw an error when projection is necessary.
 Note that this is equivalent to calling the internal function `_return_type`:
 `Base._return_type(rmul_with_projection, Tuple{X, Y, LG})`, where `lg isa LG`.
 """
-rmul_return_type(::Type{X}, ::Type{Y}) where {X, Y} =
-    rmaptype((X′, Y′) -> mul_return_type(X′, Y′), X, Y)
-rmul_return_type(::Type{X}, ::Type{Y}) where {X <: SingleValue, Y} =
-    rmaptype(Y′ -> mul_return_type(X, Y′), Y)
-rmul_return_type(::Type{X}, ::Type{Y}) where {X, Y <: SingleValue} =
-    rmaptype(X′ -> mul_return_type(X′, Y), X)
-rmul_return_type(
+rmul_with_projection_return_type(::Type{X}, ::Type{Y}) where {X, Y} =
+    rmaptype((X′, Y′) -> mul_with_projection_return_type(X′, Y′), X, Y)
+rmul_with_projection_return_type(
     ::Type{X},
     ::Type{Y},
-) where {X <: SingleValue, Y <: SingleValue} = mul_return_type(X, Y)
+) where {X <: SingleValue, Y} =
+    rmaptype(Y′ -> mul_with_projection_return_type(X, Y′), Y)
+rmul_with_projection_return_type(
+    ::Type{X},
+    ::Type{Y},
+) where {X, Y <: SingleValue} =
+    rmaptype(X′ -> mul_with_projection_return_type(X′, Y), X)
+rmul_with_projection_return_type(
+    ::Type{X},
+    ::Type{Y},
+) where {X <: SingleValue, Y <: SingleValue} =
+    mul_with_projection_return_type(X, Y)
