@@ -1675,6 +1675,10 @@ function fct_zalesak(
     stable_zero = zero(eltype(Aⱼ₊₁₂))
     stable_one = one(eltype(Aⱼ₊₁₂))
 
+    # 𝒮5.4.2 (1)  Durran (5.32)  Zalesak's cosmetic correction 
+    # which is usually omitted but used in Durran's textbook 
+    # implementation of the flux corrected transport method. 
+    # (Textbook suggests mixed results in 3 reported scenarios)
     if (
         Aⱼ₊₁₂ * (ϕⱼ₊₁ᵗᵈ - ϕⱼᵗᵈ) < stable_zero && (
             Aⱼ₊₁₂ * (ϕⱼ₊₂ᵗᵈ - ϕⱼ₊₁ᵗᵈ) < stable_zero ||
@@ -1683,15 +1687,20 @@ function fct_zalesak(
     )
         Aⱼ₊₁₂ = stable_zero
     end
+
+    # 𝒮5.4.2 (2)
+    # If flow is nondivergent, ϕᵗᵈ are not needed in the formulae below
     ϕⱼᵐᵃˣ = max(ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₋₁ᵗᵈ, ϕⱼᵗᵈ, ϕⱼ₊₁ᵗᵈ)
     ϕⱼᵐⁱⁿ = min(ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₋₁ᵗᵈ, ϕⱼᵗᵈ, ϕⱼ₊₁ᵗᵈ)
     Pⱼ⁺ = max(stable_zero, Aⱼ₋₁₂) - min(stable_zero, Aⱼ₊₁₂)
+    # Zalesak also requires, in equation (5.33) Δx/Δt, which for the 
+    # reference element we may assume Δζ = 1 between interfaces
+    # Δt however is not available at this level (for Qⱼ⁺, Qⱼ⁻)
     Qⱼ⁺ = (ϕⱼᵐᵃˣ - ϕⱼᵗᵈ)
     Rⱼ⁺ = (Pⱼ⁺ > stable_zero ? min(stable_one, Qⱼ⁺ / Pⱼ⁺) : stable_zero)
     Pⱼ⁻ = max(stable_zero, Aⱼ₊₁₂) - min(stable_zero, Aⱼ₋₁₂)
     Qⱼ⁻ = (ϕⱼᵗᵈ - ϕⱼᵐⁱⁿ)
     Rⱼ⁻ = (Pⱼ⁻ > stable_zero ? min(stable_one, Qⱼ⁻ / Pⱼ⁻) : stable_zero)
-
     ϕⱼ₊₁ᵐᵃˣ = max(ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, ϕⱼᵗᵈ, ϕⱼ₊₁ᵗᵈ, ϕⱼ₊₂ᵗᵈ)
     ϕⱼ₊₁ᵐⁱⁿ = min(ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, ϕⱼᵗᵈ, ϕⱼ₊₁ᵗᵈ, ϕⱼ₊₂ᵗᵈ)
     Pⱼ₊₁⁺ = max(stable_zero, Aⱼ₊₁₂) - min(stable_zero, Aⱼ₊₃₂)
@@ -1818,7 +1827,7 @@ Supported limiter types are
 (4) MinModLimiter
 (5) KorenLimiter
 (6) SuperbeeLimiter
-(7) MonotonizedCentralLimited
+(7) MonotonizedCentralLimiter
 (8) VanLeerLimiter
 
 """
@@ -1833,6 +1842,7 @@ struct KorenLimiter <: AbstractTVDSlopeLimiter end
 struct SuperbeeLimiter <: AbstractTVDSlopeLimiter end
 struct MonotonizedCentralLimiter <: AbstractTVDSlopeLimiter end
 struct VanLeerLimiter <: AbstractTVDSlopeLimiter end
+struct SwebyLimiter <: AbstractTVDSlopeLimiter end
 
 @inline function compute_limiter_coeff(r, ::RZeroLimiter)
     return zero(eltype(r))
@@ -1865,6 +1875,10 @@ end
 @inline function compute_limiter_coeff(r, ::VanLeerLimiter)
     return (r + abs(r)) / (1 + abs(r) + eps(eltype(r)))
 end
+
+@inline function compute_limiter_coeff(r, ::SwebyLimiter)
+    return (r + abs(r)) / (1 + abs(r) + eps(eltype(r)))
+end
 # ??? Do we want to allow flux method types to be determined here? 
 struct TVDSlopeLimitedFlux{BCS} <: AdvectionOperator
     bcs::BCS
@@ -1887,7 +1901,7 @@ function fct_tvd(Aⱼ₋₁₂, Aⱼ₊₁₂, Aⱼ₊₃₂, ϕⱼ₋₁, ϕⱼ
     stable_one = one(eltype(Aⱼ₊₁₂))
     # Test with various limiter methods
     # Aⱼ₊₁₂ is the antidiffusive flux (see Durran textbook for notation)
-    Cⱼ₊₁₂ = compute_limiter_coeff(rⱼ₊₁₂, KorenLimiter())
+    Cⱼ₊₁₂ = compute_limiter_coeff(rⱼ₊₁₂, MinModLimiter())
     return Cⱼ₊₁₂ * Aⱼ₊₁₂
 end
 
@@ -1923,6 +1937,8 @@ Base.@propagate_inbounds function stencil_interior(
     )
     # See filter options below
     rⱼ₊₁₂ = compute_slope_ratio(ϕⱼ, ϕⱼ₋₁, ϕⱼ₊₁)
+    @assert rⱼ₊₁₂ <= eltype(ϕⱼ)(2)
+    @assert rⱼ₊₁₂ >= eltype(ϕⱼ)(0)
 
     return Geometry.Contravariant3Vector(
         fct_tvd(Aⱼ₋₁₂, Aⱼ₊₁₂, Aⱼ₊₃₂, ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, rⱼ₊₁₂),

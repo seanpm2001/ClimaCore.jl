@@ -59,7 +59,7 @@ function tendency!(yₜ, y, parameters, t)
         -divf2c(
             upwind1(w, y.q) + TVDSlopeLimitedFlux(
                 upwind3(w, y.q) - upwind1(w, y.q),
-                y.q, 
+                y.q / Δt, 
             ),
         )
 end
@@ -69,8 +69,8 @@ pulse(z, t, z₀, zₕ, z₁) = abs(z - speed * t) ≤ zₕ ? z₁ : z₀
 
 FT = Float64
 t₀ = FT(0.0)
-Δt = 0.0001
-t₁ = 10000Δt
+Δt = 0.0001 * 25
+t₁ = 200Δt
 z₀ = FT(0.0)
 zₕ = FT(1.0)
 z₁ = FT(1.0)
