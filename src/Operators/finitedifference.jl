@@ -1695,7 +1695,6 @@ function fct_zalesak(
     Pⱼ⁺ = max(stable_zero, Aⱼ₋₁₂) - min(stable_zero, Aⱼ₊₁₂)
     # Zalesak also requires, in equation (5.33) Δx/Δt, which for the 
     # reference element we may assume Δζ = 1 between interfaces
-    # Δt however is not available at this level (for Qⱼ⁺, Qⱼ⁻)
     Qⱼ⁺ = (ϕⱼᵐᵃˣ - ϕⱼᵗᵈ)
     Rⱼ⁺ = (Pⱼ⁺ > stable_zero ? min(stable_one, Qⱼ⁺ / Pⱼ⁺) : stable_zero)
     Pⱼ⁻ = max(stable_zero, Aⱼ₊₁₂) - min(stable_zero, Aⱼ₋₁₂)
@@ -1713,7 +1712,6 @@ function fct_zalesak(
     Cⱼ₊₁₂ = (Aⱼ₊₁₂ ≥ stable_zero ? min(Rⱼ₊₁⁺, Rⱼ⁻) : min(Rⱼ⁺, Rⱼ₊₁⁻))
 
     return Cⱼ₊₁₂ * Aⱼ₊₁₂
-
 end
 
 stencil_interior_width(::FCTZalesak, A_space, Φ_space, Φᵗᵈ_space) =
@@ -1829,6 +1827,7 @@ Supported limiter types are
 (6) SuperbeeLimiter
 (7) MonotonizedCentralLimiter
 (8) VanLeerLimiter
+(9) ThirdOrderLimiter
 
 """
 ### Here we define abstract types and specific implementations 
@@ -1843,6 +1842,7 @@ struct SuperbeeLimiter <: AbstractTVDSlopeLimiter end
 struct MonotonizedCentralLimiter <: AbstractTVDSlopeLimiter end
 struct VanLeerLimiter <: AbstractTVDSlopeLimiter end
 struct SwebyLimiter <: AbstractTVDSlopeLimiter end
+struct ThirdOrderLimiter <: AbstractTVDSlopeLimiter end
 
 @inline function compute_limiter_coeff(r, ::RZeroLimiter)
     return zero(eltype(r))
@@ -1854,6 +1854,10 @@ end
 
 @inline function compute_limiter_coeff(r, ::RMaxLimiter)
     return one(eltype(r))
+end
+
+@inline function compute_limiter_coeff(r, ::ThirdOrderLimiter)
+    return 1/3 + 2r/3
 end
 
 @inline function compute_limiter_coeff(r, ::MinModLimiter)
@@ -1895,13 +1899,16 @@ return_space(
     Φ_space::AllCenterFiniteDifferenceSpace,
 ) = A_space
 
-function fct_tvd(Aⱼ₋₁₂, Aⱼ₊₁₂, Aⱼ₊₃₂, ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, rⱼ₊₁₂)
+function tvd_limited_flux(Aⱼ₋₁₂, Aⱼ₊₁₂, ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, rⱼ₊₁₂)
     # 1/dt is in ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, ϕⱼ₋₁ᵗᵈ, ϕⱼᵗᵈ, ϕⱼ₊₁ᵗᵈ, ϕⱼ₊₂ᵗᵈ
     stable_zero = zero(eltype(Aⱼ₊₁₂))
     stable_one = one(eltype(Aⱼ₊₁₂))
     # Test with various limiter methods
     # Aⱼ₊₁₂ is the antidiffusive flux (see Durran textbook for notation)
-    Cⱼ₊₁₂ = compute_limiter_coeff(rⱼ₊₁₂, MinModLimiter())
+    Cⱼ₊₁₂ = compute_limiter_coeff(rⱼ₊₁₂, MonotonizedCentralLimiter())
+    # Assert condition for TVD limiter
+    #@assert Cⱼ₊₁₂ <= eltype(Aⱼ₊₁₂)(2)
+    #@assert Cⱼ₊₁₂ >= eltype(Aⱼ₊₁₂)(0)
     return Cⱼ₊₁₂ * Aⱼ₊₁₂
 end
 
@@ -1931,17 +1938,11 @@ Base.@propagate_inbounds function stencil_interior(
         getidx(space, A_field, loc, idx - 1, hidx),
         Geometry.LocalGeometry(space, idx - 1, hidx),
     )
-    Aⱼ₊₃₂ = Geometry.contravariant3(
-        getidx(space, A_field, loc, idx + 1, hidx),
-        Geometry.LocalGeometry(space, idx + 1, hidx),
-    )
     # See filter options below
     rⱼ₊₁₂ = compute_slope_ratio(ϕⱼ, ϕⱼ₋₁, ϕⱼ₊₁)
-    @assert rⱼ₊₁₂ <= eltype(ϕⱼ)(2)
-    @assert rⱼ₊₁₂ >= eltype(ϕⱼ)(0)
 
     return Geometry.Contravariant3Vector(
-        fct_tvd(Aⱼ₋₁₂, Aⱼ₊₁₂, Aⱼ₊₃₂, ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, rⱼ₊₁₂),
+        tvd_limited_flux(Aⱼ₋₁₂, Aⱼ₊₁₂, ϕⱼ₋₁, ϕⱼ, ϕⱼ₊₁, ϕⱼ₊₂, rⱼ₊₁₂),
     )
 end
 
