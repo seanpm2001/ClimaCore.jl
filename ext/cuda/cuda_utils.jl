@@ -39,21 +39,23 @@ function auto_launch!(
     nitems = get_n_items(data)
     # For now, we'll simply use the
     # suggested threads and blocks:
-    CUDA.@cuda always_inline = always_inline threads = threads_s blocks =
-        blocks_s f!(args...)
+    # CUDA.@cuda always_inline = always_inline threads = threads_s blocks =
+    #     blocks_s f!(args...)
 
     # Soon, we'll experiment with `CUDA.launch_configuration`
-    # kernel = CUDA.@cuda always_inline = true launch = false f!(args...)
-    # config = CUDA.launch_configuration(kernel.fun)
-    # threads = min(nitems, config.threads)
-    # blocks = cld(nitems, threads)
-    # s = ""
-    # s *= "Launching kernel $f! with following config:\n"
-    # s *= "     nitems: $nitems\n"
-    # s *= "     threads: $threads\n"
-    # s *= "     blocks: $blocks\n"
-    # @info s
-    # kernel(args...; threads, blocks) # This knows to use always_inline from above.
+    if nitems > 0
+        kernel = CUDA.@cuda always_inline = true launch = false f!(args...)
+        config = CUDA.launch_configuration(kernel.fun)
+        threads = min(nitems, config.threads)
+        blocks = cld(nitems, threads)
+        # s = ""
+        # s *= "Launching kernel $f! with following config:\n"
+        # s *= "     nitems: $nitems\n"
+        # s *= "     threads: $threads\n"
+        # s *= "     blocks: $blocks\n"
+        # @info s
+        kernel(args...; threads, blocks) # This knows to use always_inline from above.
+    end
 end
 
 """

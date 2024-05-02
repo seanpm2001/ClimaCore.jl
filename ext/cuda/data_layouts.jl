@@ -21,30 +21,50 @@ Base.similar(
     dims::Dims{N},
 ) where {T, N, B} = similar(CUDA.CuArray{T, N, B}, dims)
 
+
+field_indices(::IJFH, inds) = inds
+field_indices(data, inds) = (inds[1], inds[2], 1, inds[4], inds[5])
 function knl_copyto!(dest, src)
+    (Nij, Nij, _, Nv, Nh) = size(dest)
+    n = (Nij, Nij, 1, Nv, Nh)
+    inds = kernel_indexes(n)
+    field_inds = field_indices(dest, inds)
 
-    i = CUDA.threadIdx().x
-    j = CUDA.threadIdx().y
-
-    h = CUDA.blockIdx().x
-    v = CUDA.blockDim().z * (CUDA.blockIdx().y - 1) + CUDA.threadIdx().z
-
-    if v <= size(dest, 4)
-        I = CartesianIndex((i, j, 1, v, h))
+    if valid_range(inds, n)
+        I = CartesianIndex(field_inds)
+        # I = CartesianIndex((i, j, 1, v, h))
+        # CUDA.@cuprintln("I_new = $(I.I), inds = $(inds), n = $n")
         @inbounds dest[I] = src[I]
     end
     return nothing
 end
 
+# function knl_copyto_old!(dest, src)
+
+#     i = CUDA.threadIdx().x
+#     j = CUDA.threadIdx().y
+
+#     h = CUDA.blockIdx().x
+#     v = CUDA.blockDim().z * (CUDA.blockIdx().y - 1) + CUDA.threadIdx().z
+
+#     I = CartesianIndex((i, j, 1, v, h))
+#     # CUDA.@cuprintln("I_old = $(I.I)")
+#     if v <= size(dest, 4)
+#         @inbounds dest[I] = src[I]
+#     end
+#     return nothing
+# end
+
+to_cartesian(dest::VF, inds) = CartesianIndex()
 function knl_fill!(dest, val)
-    i = CUDA.threadIdx().x
-    j = CUDA.threadIdx().y
+    (Nij, Nij, _, Nv, Nh) = size(dest)
+    n = (Nij, Nij, 1, Nv, Nh)
+    inds = kernel_indexes(n)
 
-    h = CUDA.blockIdx().x
-    v = CUDA.blockDim().z * (CUDA.blockIdx().y - 1) + CUDA.threadIdx().z
-
-    if v <= size(dest, 4)
-        I = CartesianIndex((i, j, 1, v, h))
+    if valid_range(inds, n)
+        field_inds = field_indices(dest, inds)
+        I = CartesianIndex(field_inds)
+        # I = CartesianIndex((i, j, 1, v, h))
         @inbounds dest[I] = val
     end
     return nothing
