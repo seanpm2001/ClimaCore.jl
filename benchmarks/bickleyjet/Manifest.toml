@@ -214,7 +214,7 @@ version = "0.6.4"
 deps = ["Adapt", "BandedMatrices", "BlockArrays", "ClimaComms", "CubedSphere", "DataStructures", "DocStringExtensions", "ForwardDiff", "GaussQuadrature", "GilbertCurves", "HDF5", "InteractiveUtils", "IntervalSets", "KrylovKit", "LinearAlgebra", "MultiBroadcastFusion", "NVTX", "PkgVersion", "RecursiveArrayTools", "RootSolvers", "SparseArrays", "StaticArrays", "Statistics", "UnrolledUtilities"]
 path = "../.."
 uuid = "d414da3d-4745-48bb-8d80-42e94e092884"
-version = "0.14.18"
+version = "0.14.19"
 
     [deps.ClimaCore.extensions]
     ClimaCoreCUDAExt = "CUDA"
@@ -1441,7 +1441,7 @@ uuid = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 version = "1.6.4"
 
 [[deps.UnrolledUtilities]]
-git-tree-sha1 = "656fa6b205b2052893b12fee4cc85328080930b4"
+git-tree-sha1 = "acadfd5f2c96722d1c65fcaac68144726d950ec4"
 repo-rev = "dy/improve_compilation"
 repo-url = "https://github.com/CliMA/UnrolledUtilities.jl.git"
 uuid = "0fe1646c-419e-43be-ac14-22321958931b"
