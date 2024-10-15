@@ -2511,8 +2511,8 @@ uuid = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 version = "1.6.4"
 
 [[deps.UnrolledUtilities]]
-git-tree-sha1 = "acadfd5f2c96722d1c65fcaac68144726d950ec4"
-repo-rev = "dy/improve_compilation"
+git-tree-sha1 = "9dce408e076a8e8c4115720cef6a5d827b8afd8f"
+repo-rev = "dy/15_plus_16"
 repo-url = "https://github.com/CliMA/UnrolledUtilities.jl.git"
 uuid = "0fe1646c-419e-43be-ac14-22321958931b"
 version = "0.1.5"
