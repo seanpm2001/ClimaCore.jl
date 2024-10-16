@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.5"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "df8d928b39b6ed33e1d2e8ca2259b9ea4e459a05"
 
@@ -2511,8 +2511,8 @@ uuid = "45397f5d-5981-4c77-b2b3-fc36d6e9b728"
 version = "1.6.4"
 
 [[deps.UnrolledUtilities]]
-git-tree-sha1 = "9dce408e076a8e8c4115720cef6a5d827b8afd8f"
-repo-rev = "dy/15_plus_16"
+git-tree-sha1 = "b1fc31b73951bd211bec7186353080fe9206ce4b"
+repo-rev = "dy/recursion_limit"
 repo-url = "https://github.com/CliMA/UnrolledUtilities.jl.git"
 uuid = "0fe1646c-419e-43be-ac14-22321958931b"
 version = "0.1.5"
@@ -2808,7 +2808,7 @@ version = "0.15.2+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.11.0+0"
+version = "5.8.0+1"
 
 [[deps.libdecor_jll]]
 deps = ["Artifacts", "Dbus_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pango_jll", "Wayland_jll", "xkbcommon_jll"]
