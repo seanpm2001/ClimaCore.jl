@@ -1,3 +1,7 @@
+#=
+julia --project
+using Revise; include("test/Remapping/distributed_remapping.jl")
+=#
 using Logging
 using Test
 using IntervalSets
@@ -656,4 +660,41 @@ end
         @test interp_sin_lat ≈ dest[:, :, 2]
         @test interp_sin_long ≈ dest[:, :, 3]
     end
+end
+
+@testset "Purely vertical space" begin
+    vertdomain = Domains.IntervalDomain(
+        Geometry.ZPoint(0.0),
+        Geometry.ZPoint(1000.0);
+        boundary_names = (:bottom, :top),
+    )
+
+    vertmesh = Meshes.IntervalMesh(vertdomain, nelems = 30)
+    verttopo = Topologies.IntervalTopology(
+        ClimaComms.SingletonCommsContext(ClimaComms.device()),
+        vertmesh,
+    )
+    cspace = Spaces.CenterFiniteDifferenceSpace(verttopo)
+    space = Spaces.FaceFiniteDifferenceSpace(cspace)
+
+    zpts = range(0.0, 1000.0, 21)
+    zcoords = [Geometry.ZPoint(z) for z in zpts]
+    remapper =
+        Remapping.Remapper(space; target_zcoords = zcoords, buffer_length = 2)
+
+    coords = Fields.coordinate_field(space)
+
+    interp_z = Remapping.interpolate(remapper, coords.z)
+    expected_z = zpts
+    if ClimaComms.iamroot(context)
+        @test interp_z == collect(expected_z)
+    end
+
+    # Remapping two fields
+    interp = Remapping.interpolate(remapper, [cos.(coords.z), sin.(coords.z)])
+    if ClimaComms.iamroot(context)
+        @test interp_sin_long ≈ interp_long_lat[:, :, :, 1]
+        @test interp_sin_lat ≈ interp_long_lat[:, :, :, 2]
+    end
+
 end
