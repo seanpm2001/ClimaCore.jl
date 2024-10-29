@@ -885,6 +885,9 @@ function interpolate(remapper::Remapper, fields)
         if !isa_vertical_space
             # For spaces with an horizontal component, reshape the output so that it is a nice grid.
             _apply_mpi_bitmask!(remapper, num_fields)
+        else
+            # For purely vertical spaces, just move to _interpolated_values
+            remapper._interpolated_values .= remapper._local_interpolated_values
         end
 
         # Finally, we have to send all the _interpolated_values to root and sum them up to
@@ -897,99 +900,6 @@ function interpolate(remapper::Remapper, fields)
 
     return only_one_field ? interpolated_values[remapper.colons..., begin] :
            interpolated_values
-end
-
-"""
-       interpolate(field::ClimaCore.Fields;
-                   hresolution = 180,
-                   resolution = 50,
-                   target_hcoords = get_target_hcoords(space; hresolution),
-                   target_zcoords = get_target_cords(space; vresolution)
-                   )
-
-Interpolate the given fields on the Cartesian product of `target_hcoords` with
-`target_zcoords` (if not empty).
-
-Coordinates have to be `ClimaCore.Geometry.Points`.
-
-Note: do not use this method when performance is important. Instead, define a `Remapper` and
-call `interpolate(remapper, fields)`. Different `Field`s defined on the same `Space` can
-share a `Remapper`, so that interpolation can be optimized.
-
-Example
-========
-
-Given `field`, a `Field` defined on a cubed sphere.
-
-By default, a target uniform grid is chosen (with resolution `hresolution` and
-`vresolution`), so remapping is simply
-```julia
-julia> interpolate(field, hcoords, zcoords)
-```
-
-Coordinates can be specified:
-```julia
-julia> longpts = range(-180.0, 180.0, 21)
-julia> latpts = range(-80.0, 80.0, 21)
-julia> zpts = range(0.0, 1000.0, 21)
-
-julia> hcoords = [Geometry.LatLongPoint(lat, long) for long in longpts, lat in latpts]
-julia> zcoords = [Geometry.ZPoint(z) for z in zpts]
-
-julia> interpolate(field, hcoords, zcoords)
-```
-"""
-function interpolate(
-    field::Fields.Field;
-    vresolution = 50,
-    hresolution = 100,
-    target_hcoords = get_target_hcoords(axes(field); hresolution),
-    target_zcoords = get_target_zcoords(axes(field); vresolution),
-)
-    return interpolate(field, axes(field); hresolution, vresolution)
-end
-
-function interpolate(field::Fields.Field, target_hcoords, target_zcoords)
-    remapper = Remapper(axes(field), target_hcoords, target_zcoords)
-    return interpolate(remapper, field)
-end
-
-function get_target_hcoords(space::Spaces.AbstractSpace; hresolution)
-    return get_target_hcoords(Spaces.horizontal_space(space); hresolution)
-end
-
-function get_target_hcoords(
-    space::Spaces.SpectralElementSpace2D;
-    hresolution = 180,
-)
-    topology = Spaces.topology(space)
-    mesh = topology.mesh
-    domain = Meshes.domain(mesh)
-    PT1 = typeof(domain.interval1.coord_min)
-    PT2 = typeof(domain.interval2.coord_min)
-    x1min = Geometry.component(domain.interval1.coord_min, 1)
-    x2min = Geometry.component(domain.interval2.coord_min, 1)
-    x1max = Geometry.component(domain.interval1.coord_max, 1)
-    x2max = Geometry.component(domain.interval2.coord_max, 1)
-    x1 = map(PT1, range(x1min, x1max; length = hresolution))
-    x2 = map(PT2, range(x2min, x2max; length = hresolution))
-    return Base.Iterators.product((x1, x2))
-end
-
-function get_target_hcoords(space::Spaces.SpectralElementSpace1D; hresolution = 180)
-    topology = Spaces.topology(space)
-    mesh = topology.mesh
-    domain = Meshes.domain(mesh)
-    PointType = typeof(domain.interval1.coord_min)
-    xmin = Geometry.component(domain.interval1.coord_min, 1)
-    xmax = Geometry.component(domain.interval1.coord_max, 1)
-    return PointType.(range(x1min, x1max; length = hresolution))
-end
-
-function get_target_zcoords(space; vresolution = 50)
-    return Geometry.ZPoint.(
-        range(z_min(space), z_max(space); length = vresolution)
-    )
 end
 
 # dest has to be allowed to be nothing because interpolation happens only on the root
@@ -1040,6 +950,9 @@ function interpolate!(
         if !isa_vertical_space
             # For spaces with an horizontal component, reshape the output so that it is a nice grid.
             _apply_mpi_bitmask!(remapper, num_fields)
+        else
+            # For purely vertical spaces, just move to _interpolated_values
+            remapper._interpolated_values .= remapper._local_interpolated_values
         end
 
         # Finally, we have to send all the _interpolated_values to root and sum them up to
@@ -1058,4 +971,97 @@ function interpolate!(
             min(length(fields), index_field_end + remapper.buffer_length)
     end
     return nothing
+end
+
+"""
+       interpolate(field::ClimaCore.Fields;
+                   hresolution = 180,
+                   resolution = 50,
+                   target_hcoords = default_target_hcoords(space; hresolution),
+                   target_zcoords = default_target_vcoords(space; vresolution)
+                   )
+
+Interpolate the given fields on the Cartesian product of `target_hcoords` with
+`target_zcoords` (if not empty).
+
+Coordinates have to be `ClimaCore.Geometry.Points`.
+
+Note: do not use this method when performance is important. Instead, define a `Remapper` and
+call `interpolate(remapper, fields)`. Different `Field`s defined on the same `Space` can
+share a `Remapper`, so that interpolation can be optimized.
+
+Example
+========
+
+Given `field`, a `Field` defined on a cubed sphere.
+
+By default, a target uniform grid is chosen (with resolution `hresolution` and
+`vresolution`), so remapping is simply
+```julia
+julia> interpolate(field, hcoords, zcoords)
+```
+
+Coordinates can be specified:
+```julia
+julia> longpts = range(-180.0, 180.0, 21)
+julia> latpts = range(-80.0, 80.0, 21)
+julia> zpts = range(0.0, 1000.0, 21)
+
+julia> hcoords = [Geometry.LatLongPoint(lat, long) for long in longpts, lat in latpts]
+julia> zcoords = [Geometry.ZPoint(z) for z in zpts]
+
+julia> interpolate(field, hcoords, zcoords)
+```
+"""
+function interpolate(
+    field::Fields.Field;
+    vresolution = 50,
+    hresolution = 100,
+    target_hcoords = default_target_hcoords(axes(field); hresolution),
+    target_zcoords = default_target_zcoords(axes(field); vresolution),
+)
+    return interpolate(field, axes(field); hresolution, vresolution)
+end
+
+function interpolate(field::Fields.Field, target_hcoords, target_zcoords)
+    remapper = Remapper(axes(field), target_hcoords, target_zcoords)
+    return interpolate(remapper, field)
+end
+
+function default_target_hcoords(space::Spaces.AbstractSpace; hresolution)
+    return default_target_hcoords(Spaces.horizontal_space(space); hresolution)
+end
+
+function default_target_hcoords(
+    space::Spaces.SpectralElementSpace2D;
+    hresolution = 180,
+)
+    topology = Spaces.topology(space)
+    mesh = topology.mesh
+    domain = Meshes.domain(mesh)
+    PointType1 = typeof(domain.interval1.coord_min)
+    PointType2 = typeof(domain.interval2.coord_min)
+    x1min = Geometry.component(domain.interval1.coord_min, 1)
+    x2min = Geometry.component(domain.interval2.coord_min, 1)
+    x1max = Geometry.component(domain.interval1.coord_max, 1)
+    x2max = Geometry.component(domain.interval2.coord_max, 1)
+    x1 = map(PointType1, range(x1min, x1max; length = hresolution))
+    x2 = map(PointType2, range(x2min, x2max; length = hresolution))
+    return Base.Iterators.product((x1, x2))
+end
+
+function default_target_hcoords(space::Spaces.SpectralElementSpace1D; hresolution = 180)
+    topology = Spaces.topology(space)
+    mesh = topology.mesh
+    domain = Meshes.domain(mesh)
+    PointType = typeof(domain.interval1.coord_min)
+    xmin = Geometry.component(domain.interval1.coord_min, 1)
+    xmax = Geometry.component(domain.interval1.coord_max, 1)
+    return PointType.(range(x1min, x1max; length = hresolution))
+end
+
+function default_target_zcoords(space; vresolution = 50)
+    return Geometry.ZPoint.(
+        range(z_min(space), z_max(space); length = vresolution)
+    )
 end

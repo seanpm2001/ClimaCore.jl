@@ -6,6 +6,10 @@ main
 
  - Fixed world-age issue on Julia 1.11 issue [Julia#54780](https://github.com/JuliaLang/julia/issues/54780), PR [#2034](https://github.com/CliMA/ClimaCore.jl/pull/2034).
 
+### ![][badge-✨feature/enhancement] Various improvements to `Remapper`
+
+
+
 v0.14.19
 -------
 
