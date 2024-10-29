@@ -4,7 +4,11 @@ ClimaCore.jl Release Notes
 main
 -------
 
- - We've added new datalayouts: `VIJHF`,`IJHF`,`IHF`,`VIHF`, to explore their performance compared to our existing datalayouts: `VIJFH`,`IJFH`,`IFH`,`VIFH`. PR [#2055](https://github.com/CliMA/ClimaCore.jl/pull/2053), PR [#2052](https://github.com/CliMA/ClimaCore.jl/pull/2055).
+v0.14.20
+-------
+
+ - We now try to leverage SIMD on the CPU in pointwise kernels for datalayouts whose field index is last PR [#2055](https://github.com/CliMA/ClimaCore.jl/pull/2055).
+ - We've added new datalayouts: `VIJHF`,`IJHF`,`IHF`,`VIHF`, to explore their performance compared to our existing datalayouts: `VIJFH`,`IJFH`,`IFH`,`VIFH`. PR [#2053](https://github.com/CliMA/ClimaCore.jl/pull/2053), PR [#2055](https://github.com/CliMA/ClimaCore.jl/pull/2055).
  - We've refactored some modules to use less internals. PR [#2053](https://github.com/CliMA/ClimaCore.jl/pull/2053), PR [#2052](https://github.com/CliMA/ClimaCore.jl/pull/2052), [#2051](https://github.com/CliMA/ClimaCore.jl/pull/2051), [#2049](https://github.com/CliMA/ClimaCore.jl/pull/2049).
  - Some work was done in attempt to reduce specializations and compile time. PR [#2042](https://github.com/CliMA/ClimaCore.jl/pull/2042), [#2041](https://github.com/CliMA/ClimaCore.jl/pull/2041)
 
