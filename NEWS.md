@@ -4,6 +4,14 @@ ClimaCore.jl Release Notes
 main
 -------
 
+ - We've added new convenience constructors for grids PR [1848](https://github.com/CliMA/ClimaCore.jl/pull/1848). Here are links to the new constructors:
+   - [ExtrudedCubedSphereGrid]()
+   - [CubedSphereGrid]()
+   - [ColumnGrid]()
+   - [Box3DGrid]()
+   - [SliceXZGrid]()
+   - [RectangleXYGrid]()
+
  - We've added new datalayouts: `VIJHF`,`IJHF`,`IHF`,`VIHF`, to explore their performance compared to our existing datalayouts: `VIJFH`,`IJFH`,`IFH`,`VIFH`. PR [#2055](https://github.com/CliMA/ClimaCore.jl/pull/2053), PR [#2052](https://github.com/CliMA/ClimaCore.jl/pull/2055).
  - We've refactored some modules to use less internals. PR [#2053](https://github.com/CliMA/ClimaCore.jl/pull/2053), PR [#2052](https://github.com/CliMA/ClimaCore.jl/pull/2052), [#2051](https://github.com/CliMA/ClimaCore.jl/pull/2051), [#2049](https://github.com/CliMA/ClimaCore.jl/pull/2049).
  - Some work was done in attempt to reduce specializations and compile time. PR [#2042](https://github.com/CliMA/ClimaCore.jl/pull/2042), [#2041](https://github.com/CliMA/ClimaCore.jl/pull/2041)
