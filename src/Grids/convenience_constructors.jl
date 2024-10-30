@@ -229,6 +229,50 @@ function Box3DGrid(
 end
 
 """
+    SliceXMesh(
+        ::Type{<:AbstractFloat}; # defaults to Float64
+        x_min::Real,
+        x_max::Real,
+        z_min::Real,
+        z_max::Real,
+        periodic_x::Bool,
+        n_quad_points::Integer,
+        x_elem::Integer,
+        device::ClimaComms.AbstractDevice = ClimaComms.device(),
+        context::ClimaComms.AbstractCommsContext = ClimaComms.context(device),
+        stretch::Meshes.StretchingRule = Meshes.Uniform(),
+        hypsography::HypsographyAdaption = Flat(),
+        global_geometry::Geometry.AbstractGlobalGeometry = Geometry.CartesianGlobalGeometry(),
+        quad::Quadratures.QuadratureStyle = Quadratures.GLL{n_quad_points}(),
+    )
+
+A convenience constructor, which builds a
+`ExtrudedFiniteDifferenceGrid` with a
+`FiniteDifferenceGrid` vertical grid and a
+`SpectralElementGrid1D` horizontal grid.
+ - ``
+"""
+SliceXMesh(; kwargs...) = SliceXMesh(Float64; kwargs...)
+function SliceXMesh(
+    ::Type{FT};
+    x_min::Real,
+    x_max::Real,
+    periodic_x::Bool,
+    x_elem::Integer,
+) where {FT}
+
+    x1boundary = (:east, :west)
+    z_boundary_names = (:bottom, :top)
+    h_domain = Domains.IntervalDomain(
+        Geometry.XPoint{FT}(x_min),
+        Geometry.XPoint{FT}(x_max);
+        periodic = periodic_x,
+        boundary_names = (:east, :west),
+    )
+    return Meshes.IntervalMesh(h_domain; nelems = x_elem)
+end
+
+"""
     SliceXZGrid(
         ::Type{<:AbstractFloat}; # defaults to Float64
         z_elem::Integer,
@@ -271,22 +315,15 @@ function SliceXZGrid(
     global_geometry::Geometry.AbstractGlobalGeometry = Geometry.CartesianGlobalGeometry(),
     quad::Quadratures.QuadratureStyle = Quadratures.GLL{n_quad_points}(),
     horizontal_layout_type = DataLayouts.IFH,
+    h_mesh::Meshes.IntervalMesh = SliceXMesh(FT; x_min,x_max,periodic_x,x_elem),
 ) where {FT}
     @assert horizontal_layout_type <: DataLayouts.AbstractData
     check_device_context(context, device)
 
-    x1boundary = (:east, :west)
-    z_boundary_names = (:bottom, :top)
-    h_domain = Domains.IntervalDomain(
-        Geometry.XPoint{FT}(x_min),
-        Geometry.XPoint{FT}(x_max);
-        periodic = periodic_x,
-        boundary_names = x1boundary,
-    )
-    h_mesh = Meshes.IntervalMesh(h_domain; nelems = x_elem)
     h_topology = Topologies.IntervalTopology(context, h_mesh)
     h_grid =
         Grids.SpectralElementGrid1D(h_topology, quad; horizontal_layout_type)
+    z_boundary_names = (:bottom, :top)
     z_domain = Domains.IntervalDomain(
         Geometry.ZPoint{FT}(z_min),
         Geometry.ZPoint{FT}(z_max);
